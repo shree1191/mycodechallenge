@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GitHubMostPouplarReposCreatedLastWeekServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">microservice</a> &gt; <a href="index.source.html" class="el_package">com.telstra.codechallenge.serviceImpl</a> &gt; <span class="el_source">GitHubMostPouplarReposCreatedLastWeekServiceImpl.java</span></div><h1>GitHubMostPouplarReposCreatedLastWeekServiceImpl.java</h1><pre class="source lang-java linenums">package com.telstra.codechallenge.serviceImpl;
+
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
+import com.telstra.codechallenge.dto.GitHubMostPouplarReposCreatedLastWeek;
+import com.telstra.codechallenge.service.GitHubMostPouplarReposCreatedLastWeekService;
+import com.telstra.codechallenge.utility.DateUtility;
+import com.telstra.codechallenge.utility.SortRepoData;
+
+@Service
+public class GitHubMostPouplarReposCreatedLastWeekServiceImpl implements GitHubMostPouplarReposCreatedLastWeekService {
+
+	@Value(&quot;${GitRepo.base.url}&quot;)
+	private String GitRepoBaseUrl;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+<span class="fc" id="L35">	private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());</span>
+
+<span class="fc" id="L37">	public GitHubMostPouplarReposCreatedLastWeekServiceImpl(RestTemplate restTemplate) {</span>
+<span class="fc" id="L38">		this.restTemplate = restTemplate;</span>
+<span class="fc" id="L39">	}</span>
+
+	@HystrixCommand(commandProperties = {
+			@HystrixProperty(name = &quot;execution.timeout.enabled&quot;, value = &quot;false&quot;) }, fallbackMethod = &quot;reliable&quot;)
+	public List&lt;GitHubMostPouplarReposCreatedLastWeek&gt; mostPopularRepository(String limit) {
+
+<span class="nc" id="L45">		LOGGER.info(&quot;---------- In the HottestRepoCreatedLastWeekService ---------- &quot;);</span>
+
+<span class="nc" id="L47">		GitHubMostPouplarReposCreatedLastWeek hottestRepoCreatedLastWeek = null;</span>
+<span class="nc" id="L48">		JSONObject jsonObject = null;</span>
+<span class="nc" id="L49">		JSONArray arrayObject = null;</span>
+
+<span class="nc" id="L51">		int num = 0;</span>
+<span class="nc" id="L52">		List&lt;GitHubMostPouplarReposCreatedLastWeek&gt; hottestRepoList = new ArrayList&lt;GitHubMostPouplarReposCreatedLastWeek&gt;();</span>
+
+<span class="nc" id="L54">		String data = restTemplate.getForObject(GitRepoBaseUrl + &quot;repositories?q=created:&quot;,</span>
+				String.class);
+		try {
+<span class="nc" id="L57">			jsonObject = new JSONObject(data);</span>
+<span class="nc" id="L58">			arrayObject = jsonObject.getJSONArray(&quot;items&quot;);</span>
+<span class="nc" id="L59">		} catch (JSONException e) {</span>
+<span class="nc" id="L60">			LOGGER.error(&quot;JSON Exception : &quot; + e.getMessage());</span>
+<span class="nc" id="L61">		}</span>
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">		if (arrayObject != null) {</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">			for (int i = 0; i &lt; arrayObject.length(); i++) {</span>
+				try {
+					// get Data from API and assign to local variable
+<span class="nc" id="L67">					String createdAt = arrayObject.getJSONObject(i).getString(&quot;updated_at&quot;);</span>
+<span class="nc" id="L68">					String watchersCount = arrayObject.getJSONObject(i).getString(&quot;watchers_count&quot;);</span>
+<span class="nc" id="L69">					String language = arrayObject.getJSONObject(i).getString(&quot;language&quot;);</span>
+<span class="nc" id="L70">					String description = arrayObject.getJSONObject(i).getString(&quot;description&quot;);</span>
+<span class="nc" id="L71">					String name = arrayObject.getJSONObject(i).getString(&quot;name&quot;);</span>
+<span class="nc" id="L72">					String htmlURL = arrayObject.getJSONObject(i).getString(&quot;html_url&quot;);</span>
+
+					// get Formatted date , convert string formatted date into Date Formatted
+<span class="nc" id="L75">					Date repoCreatedDate = DateUtility.getFormattedDate(createdAt);</span>
+					/* get date of previous 7th day date */
+<span class="nc" id="L77">					Date lastWeekRecords = DateUtility.getPreviousSevenDaysdate();</span>
+
+					/*
+					 * get the records by compare current date to previous 7th day date
+					 */
+<span class="nc bnc" id="L82" title="All 2 branches missed.">					if (repoCreatedDate.after(lastWeekRecords)) {</span>
+						// set the API date to POJO object
+<span class="nc" id="L84">						hottestRepoCreatedLastWeek = new GitHubMostPouplarReposCreatedLastWeek();</span>
+<span class="nc" id="L85">						hottestRepoCreatedLastWeek.setHtmlUrl(htmlURL);</span>
+<span class="nc" id="L86">						hottestRepoCreatedLastWeek.setName(name);</span>
+<span class="nc" id="L87">						hottestRepoCreatedLastWeek.setLanguage(language);</span>
+<span class="nc" id="L88">						hottestRepoCreatedLastWeek.setDescription(description);</span>
+<span class="nc" id="L89">						hottestRepoCreatedLastWeek.setWatchersCount(watchersCount);</span>
+
+						// store POJO object in List
+<span class="nc" id="L92">						hottestRepoList.add(hottestRepoCreatedLastWeek);</span>
+
+						// Apply sorting descending order
+<span class="nc" id="L95">						Collections.sort(hottestRepoList, new SortRepoData());</span>
+					}
+<span class="nc" id="L97">				} catch (JSONException e) {</span>
+<span class="nc" id="L98">					LOGGER.error(&quot;JSON object is empty or null :&quot; + e.getMessage());</span>
+
+<span class="nc" id="L100">				}</span>
+
+			}
+		} else {
+<span class="nc" id="L104">			LOGGER.error(&quot;JSON Object Array is null&quot;);</span>
+		}
+		/*
+		 * 
+		 * Check limit value limit should be in number format and positive integre if
+		 * not then display error
+		 * 
+		 */
+		try {
+<span class="nc" id="L113">			num = Integer.parseUnsignedInt(limit);</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">			if (num != 0) {</span>
+<span class="nc" id="L115">				return hottestRepoList.subList(0, num);</span>
+			} else {
+<span class="nc" id="L117">				return hottestRepoList;</span>
+			}
+
+<span class="nc" id="L120">		} catch (NumberFormatException e) {</span>
+<span class="nc" id="L121">			LOGGER.error(&quot;Limit must be number value : &quot; + e.getMessage());</span>
+
+<span class="nc" id="L123">			List&lt;GitHubMostPouplarReposCreatedLastWeek&gt; numberFormatErrorMessages = new ArrayList&lt;GitHubMostPouplarReposCreatedLastWeek&gt;();</span>
+<span class="nc" id="L124">			GitHubMostPouplarReposCreatedLastWeek limitValueError = new GitHubMostPouplarReposCreatedLastWeek();</span>
+
+<span class="nc" id="L126">			limitValueError.setErrorMessage(&quot;Please enter valid positive interger value for Limit parameter.&quot;);</span>
+
+<span class="nc" id="L128">			numberFormatErrorMessages.add(limitValueError);</span>
+
+<span class="nc" id="L130">			return numberFormatErrorMessages;</span>
+
+		}
+
+	}
+
+	/*
+	 * this method for netflix fallback method
+	 */
+
+	public List&lt;GitHubMostPouplarReposCreatedLastWeek&gt; reliable(String limit) {
+<span class="nc" id="L141">		LOGGER.info(&quot;----------- In netflix relible method  ----------------&quot;);</span>
+<span class="nc" id="L142">		List&lt;GitHubMostPouplarReposCreatedLastWeek&gt; fallbackObject = new ArrayList&lt;GitHubMostPouplarReposCreatedLastWeek&gt;();</span>
+<span class="nc" id="L143">		GitHubMostPouplarReposCreatedLastWeek fallbackMessage = new GitHubMostPouplarReposCreatedLastWeek();</span>
+<span class="nc" id="L144">		fallbackMessage.setErrorMessage(&quot;Server is down !! please try after some time&quot;);</span>
+<span class="nc" id="L145">		fallbackObject.add(fallbackMessage);</span>
+<span class="nc" id="L146">		return fallbackObject;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

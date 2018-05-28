@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GitHubRepowithZeroFollowersServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">microservice</a> &gt; <a href="index.source.html" class="el_package">com.telstra.codechallenge.serviceImpl</a> &gt; <span class="el_source">GitHubRepowithZeroFollowersServiceImpl.java</span></div><h1>GitHubRepowithZeroFollowersServiceImpl.java</h1><pre class="source lang-java linenums">package com.telstra.codechallenge.serviceImpl;
+
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
+import com.telstra.codechallenge.dto.GitHubRepowithZeroFollowers;
+import com.telstra.codechallenge.service.GitHubRepowithZeroFollowersService;
+
+@Service
+public class GitHubRepowithZeroFollowersServiceImpl implements GitHubRepowithZeroFollowersService{
+
+	@Value(&quot;${GitRepo.base.url}&quot;)
+	private String GitRepoBaseUrl;
+
+	private RestTemplate restTemplate;
+
+<span class="fc" id="L29">	private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());</span>
+
+<span class="fc" id="L31">	public GitHubRepowithZeroFollowersServiceImpl(RestTemplate restTemplate) {</span>
+<span class="fc" id="L32">		this.restTemplate = restTemplate;</span>
+<span class="fc" id="L33">	}</span>
+
+	@HystrixCommand(commandProperties = {
+			@HystrixProperty(name = &quot;execution.timeout.enabled&quot;, value = &quot;false&quot;) }, fallbackMethod = &quot;reliable&quot;)
+	public List&lt;GitHubRepowithZeroFollowers&gt; zeroFollowres(String limit) {
+<span class="nc" id="L38">		int num = 0;</span>
+
+<span class="nc" id="L40">		LOGGER.info(&quot;---------- in ZeroFollowersService ----------&quot;);</span>
+<span class="nc" id="L41">		GitHubRepowithZeroFollowers zeroFollowers = null;</span>
+<span class="nc" id="L42">		List&lt;GitHubRepowithZeroFollowers&gt; zeroFollowersList = new ArrayList&lt;GitHubRepowithZeroFollowers&gt;();</span>
+
+<span class="nc" id="L44">		String data = restTemplate.getForObject(GitRepoBaseUrl + &quot;users?q=followers:0&amp;sort=joined&amp;order=asc&quot;,</span>
+				String.class);
+
+<span class="nc" id="L47">		JSONObject jsonObject = null;</span>
+<span class="nc" id="L48">		JSONArray arrayObject = null;</span>
+		try {
+<span class="nc" id="L50">			jsonObject = new JSONObject(data);</span>
+<span class="nc" id="L51">			arrayObject = jsonObject.getJSONArray(&quot;items&quot;);</span>
+<span class="nc" id="L52">		} catch (JSONException e) {</span>
+<span class="nc" id="L53">			LOGGER.error(&quot;JSON  Parsing Exception : &quot;, e.getMessage());</span>
+<span class="nc" id="L54">		}</span>
+
+<span class="nc bnc" id="L56" title="All 2 branches missed.">		if (arrayObject != null) {</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">			for (int i = 0; i &lt; arrayObject.length(); i++) {</span>
+				try {
+					// set the API date to POJO object
+<span class="nc" id="L60">					zeroFollowers = new GitHubRepowithZeroFollowers();</span>
+<span class="nc" id="L61">					zeroFollowers.setId(arrayObject.getJSONObject(i).getString(&quot;id&quot;));</span>
+<span class="nc" id="L62">					zeroFollowers.setLogin(arrayObject.getJSONObject(i).getString(&quot;login&quot;));</span>
+<span class="nc" id="L63">					zeroFollowers.setHtmlUrl(arrayObject.getJSONObject(i).getString(&quot;html_url&quot;));</span>
+<span class="nc" id="L64">				} catch (JSONException e) {</span>
+<span class="nc" id="L65">					LOGGER.error(&quot;JSON object is empty or null :&quot; + e.getMessage());</span>
+<span class="nc" id="L66">				}</span>
+
+<span class="nc" id="L68">				zeroFollowersList.add(zeroFollowers);</span>
+			}
+		} else {
+<span class="nc" id="L71">			LOGGER.error(&quot;JSON Array is null&quot;);</span>
+		}
+		/*
+		 * 
+		 * Check limit value limit should be in number format and positive integre if
+		 * not then display error
+		 * 
+		 */
+		try {
+<span class="nc" id="L80">			num = Integer.parseUnsignedInt(limit);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">			if (num != 0) {</span>
+<span class="nc" id="L82">				return zeroFollowersList.subList(0, num);</span>
+			} else {
+<span class="nc" id="L84">				return zeroFollowersList;</span>
+			}
+
+<span class="nc" id="L87">		} catch (NumberFormatException e) {</span>
+<span class="nc" id="L88">			LOGGER.error(&quot;Limit must be number format : &quot; + e.getMessage());</span>
+
+<span class="nc" id="L90">			List&lt;GitHubRepowithZeroFollowers&gt; numberFormatErrorMessages = new ArrayList&lt;GitHubRepowithZeroFollowers&gt;();</span>
+<span class="nc" id="L91">			GitHubRepowithZeroFollowers limitValueError = new GitHubRepowithZeroFollowers();</span>
+
+<span class="nc" id="L93">			limitValueError.setErrorMessage(&quot;Please enter valid positive interger value for Limit parameter.&quot;);</span>
+
+<span class="nc" id="L95">			numberFormatErrorMessages.add(limitValueError);</span>
+
+<span class="nc" id="L97">			return numberFormatErrorMessages;</span>
+
+		}
+
+	}
+
+	/*
+	 * this method for netflix fallback method
+	 */
+
+	public List&lt;GitHubRepowithZeroFollowers&gt; reliable(String limit) {
+<span class="nc" id="L108">		LOGGER.info(&quot;----------- In netflix relible method  ----------------&quot;);</span>
+<span class="nc" id="L109">		List&lt;GitHubRepowithZeroFollowers&gt; fallbackObjectList = new ArrayList&lt;GitHubRepowithZeroFollowers&gt;();</span>
+
+<span class="nc" id="L111">		GitHubRepowithZeroFollowers fallbackMessage = new GitHubRepowithZeroFollowers();</span>
+
+<span class="nc" id="L113">		fallbackMessage.setErrorMessage(&quot;Server is down !! please try after some time&quot;);</span>
+
+<span class="nc" id="L115">		fallbackObjectList.add(fallbackMessage);</span>
+
+<span class="nc" id="L117">		return fallbackObjectList;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

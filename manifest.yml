@@ -1,0 +1,7 @@
+---
+applications:
+- name: microservices-sample
+  host: microservices-sample
+  instances: 1
+  path: target/microservice-1.0.0-SNAPSHOT.jar
+  
